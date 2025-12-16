@@ -19,11 +19,53 @@ const cloudflareService = {
 
 		const zoneId = await this.getZoneId(authHeaders, domain);
 
+		// 1. 获取并添加 Email Routing DNS 记录
+		await this.setupEmailDns(authHeaders, zoneId);
+
+		// 2. 启用 Email Routing
 		await this.enableEmailRouting(authHeaders, zoneId);
 
+		// 3. 设置 Catch-All 规则
 		await this.setCatchAllRule(authHeaders, zoneId, workerName);
 
 		return { success: true, domain, zoneId };
+	},
+
+	async setupEmailDns(authHeaders, zoneId) {
+		// 获取需要的 DNS 记录
+		const dnsResponse = await fetch(`${CF_API_BASE}/zones/${zoneId}/email/routing/dns`, {
+			headers: { ...authHeaders, 'Content-Type': 'application/json' }
+		});
+		const dnsData = await dnsResponse.json();
+
+		if (!dnsData.success) {
+			throw new BizError(`Failed to get email DNS records: ${JSON.stringify(dnsData)}`);
+		}
+
+		// 添加每条 DNS 记录
+		for (const record of dnsData.result || []) {
+			await this.createDnsRecord(authHeaders, zoneId, record);
+		}
+	},
+
+	async createDnsRecord(authHeaders, zoneId, record) {
+		const response = await fetch(`${CF_API_BASE}/zones/${zoneId}/dns_records`, {
+			method: 'POST',
+			headers: { ...authHeaders, 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				type: record.type,
+				name: record.name,
+				content: record.content,
+				priority: record.priority,
+				ttl: record.ttl || 1
+			})
+		});
+
+		const data = await response.json();
+		// 忽略已存在的记录错误 (code 81057)
+		if (!data.success && !data.errors?.some(e => e.code === 81057)) {
+			console.log(`DNS record creation warning: ${JSON.stringify(data)}`);
+		}
 	},
 
 	getAuthHeaders(cfApiToken, cfApiKey, cfEmail) {
