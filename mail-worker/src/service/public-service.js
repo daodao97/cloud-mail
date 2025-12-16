@@ -217,7 +217,7 @@ const publicService = {
 			isDel: email.isDel,
 		}).from(email);
 
-		query.where(sql`${email.toEmail} COLLATE NOCASE LIKE ${emailAddr}`);
+		query.where(eq(email.toEmail, emailAddr));
 		query.orderBy(desc(email.emailId));
 
 		return query.limit(50).offset(0);
