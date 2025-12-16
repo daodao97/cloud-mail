@@ -203,19 +203,7 @@ const publicService = {
 			throw new BizError(t('IncorrectPwd'));
 		}
 
-		return orm(c).select({
-			emailId: email.emailId,
-			sendEmail: email.sendEmail,
-			sendName: email.name,
-			subject: email.subject,
-			toEmail: email.toEmail,
-			toName: email.toName,
-			type: email.type,
-			createTime: email.createTime,
-			content: email.content,
-			text: email.text,
-			isDel: email.isDel,
-		}).from(email)
+		return orm(c).select().from(email)
 			.where(eq(email.toEmail, emailAddr))
 			.orderBy(desc(email.emailId))
 			.limit(50)
