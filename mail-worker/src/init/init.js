@@ -26,8 +26,27 @@ const init = {
 		await this.v2_4DB(c);
 		await this.v2_5DB(c);
 		await this.v2_6DB(c);
+		await this.v2_7DB(c);
 		await settingService.refresh(c);
 		return c.text(t('initSuccess'));
+	},
+
+	async v2_7DB(c) {
+		const ADD_COLUMN_SQL_LIST = [
+			`ALTER TABLE setting ADD COLUMN cf_api_token TEXT NOT NULL DEFAULT '';`,
+			`ALTER TABLE setting ADD COLUMN cf_api_key TEXT NOT NULL DEFAULT '';`,
+			`ALTER TABLE setting ADD COLUMN cf_email TEXT NOT NULL DEFAULT '';`
+		];
+
+		const promises = ADD_COLUMN_SQL_LIST.map(async (sql) => {
+			try {
+				await c.env.db.prepare(sql).run();
+			} catch (e) {
+				console.warn(`跳过字段添加，原因：${e.message}`);
+			}
+		});
+
+		await Promise.all(promises);
 	},
 
 	async v2_6DB(c) {

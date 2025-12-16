@@ -1,5 +1,6 @@
 import BizError from '../error/biz-error';
 import KvConst from '../const/kv-const';
+import settingService from './setting-service';
 
 const CF_API_BASE = 'https://api.cloudflare.com/client/v4';
 
@@ -7,10 +8,12 @@ const cloudflareService = {
 
 	async addDomain(c, params) {
 		const { domain, workerName = 'cloud-mail' } = params;
-		// 支持两种认证方式
-		const cfApiToken = params.cfApiToken || c.env.cfApiToken;
-		const cfApiKey = params.cfApiKey || c.env.cfApiKey;
-		const cfEmail = params.cfEmail || c.env.cfEmail;
+
+		// 从设置中读取 CF 配置
+		const setting = await settingService.query(c);
+		const cfApiToken = setting.cfApiToken || c.env.cfApiToken;
+		const cfApiKey = setting.cfApiKey || c.env.cfApiKey;
+		const cfEmail = setting.cfEmail || c.env.cfEmail;
 
 		if (!domain) {
 			throw new BizError('Missing required parameter: domain');

@@ -233,6 +233,34 @@
             </div>
           </div>
 
+          <!-- Cloudflare Settings Card -->
+          <div class="settings-card">
+            <div class="card-title">Cloudflare</div>
+            <div class="card-content">
+              <div class="setting-item">
+                <div><span>API Token</span></div>
+                <div class="bot-verify">
+                  <span>{{ setting.cfApiToken ? '••••••••' : '' }}</span>
+                  <el-button class="opt-button" size="small" type="primary" @click="cfSettingShow = true">
+                    <Icon icon="fluent:settings-48-regular" width="16" height="16"/>
+                  </el-button>
+                </div>
+              </div>
+              <div class="setting-item">
+                <div><span>API Key</span></div>
+                <div class="bot-verify">
+                  <span>{{ setting.cfApiKey ? '••••••••' : '' }}</span>
+                </div>
+              </div>
+              <div class="setting-item">
+                <div><span>Email</span></div>
+                <div class="bot-verify">
+                  <span>{{ setting.cfEmail }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="settings-card">
             <div class="card-title">{{ $t('emailPush') }}</div>
             <div class="card-content">
@@ -713,6 +741,14 @@
           </div>
         </form>
       </el-dialog>
+      <el-dialog v-model="cfSettingShow" title="Cloudflare" width="340" @closed="resetCfForm">
+        <form>
+          <el-input class="dialog-input" type="text" placeholder="API Token" v-model="cfForm.cfApiToken"/>
+          <el-input class="dialog-input" type="text" placeholder="API Key" v-model="cfForm.cfApiKey"/>
+          <el-input style="margin-bottom: 10px" type="text" placeholder="Email" v-model="cfForm.cfEmail"/>
+          <el-button type="primary" style="width: 100%;" :loading="settingLoading" @click="saveCfSettings">{{ t('save') }}</el-button>
+        </form>
+      </el-dialog>
       <el-dialog v-model="emailPrefixShow" :title="t('emailPrefix')"  @closed="resetEmailPrefix"  >
         <div class="email-prefix">
           <div>{{ t('atLeast') }}</div>
@@ -790,6 +826,7 @@ let regVerifyCount = ref(1)
 let addVerifyCount = ref(1)
 let backup = '{}'
 const addS3Show = ref(false)
+const cfSettingShow = ref(false)
 const addVerifyCountShow = ref(false)
 const regVerifyCountShow = ref(false)
 const resendTokenForm = reactive({
@@ -808,6 +845,12 @@ const s3 = reactive({
   s3AccessKey: '',
   s3SecretKey: '',
   forcePathStyle: 1
+})
+
+const cfForm = reactive({
+  cfApiToken: '',
+  cfApiKey: '',
+  cfEmail: ''
 })
 
 const noticeForm = reactive({
@@ -900,6 +943,20 @@ function resetAddS3Form() {
   s3.s3AccessKey = ''
   s3.s3SecretKey = ''
   s3.forcePathStyle = setting.value.forcePathStyle
+}
+
+function resetCfForm() {
+  cfForm.cfApiToken = ''
+  cfForm.cfApiKey = ''
+  cfForm.cfEmail = ''
+}
+
+function saveCfSettings() {
+  const form = {}
+  if (cfForm.cfApiToken) form.cfApiToken = cfForm.cfApiToken
+  if (cfForm.cfApiKey) form.cfApiKey = cfForm.cfApiKey
+  if (cfForm.cfEmail) form.cfEmail = cfForm.cfEmail
+  editSetting(form)
 }
 
 const resendList = computed(() => {
@@ -1323,6 +1380,7 @@ function editSetting(settingForm, refreshStatus = true) {
     noticePopupShow.value = false
     addS3Show.value = false
     emailPrefixShow.value = false
+    cfSettingShow.value = false
   }).catch((e) => {
     loginOpacity.value = setting.value.loginOpacity
     setting.value = {...setting.value, ...JSON.parse(backup)}

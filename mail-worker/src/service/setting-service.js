@@ -77,6 +77,8 @@ const settingService = {
 
 		settingRow.s3AccessKey = settingRow.s3AccessKey ? `${settingRow.s3AccessKey.slice(0, 12)}******` : null;
 		settingRow.s3SecretKey = settingRow.s3SecretKey ? `${settingRow.s3SecretKey.slice(0, 12)}******` : null;
+		settingRow.cfApiToken = settingRow.cfApiToken ? `${settingRow.cfApiToken.slice(0, 12)}******` : null;
+		settingRow.cfApiKey = settingRow.cfApiKey ? `${settingRow.cfApiKey.slice(0, 12)}******` : null;
 		settingRow.hasR2 = !!c.env.r2
 
 		let regVerifyOpen = false
