@@ -6,35 +6,45 @@ const cloudflareService = {
 
 	async addDomain(c, params) {
 		const { domain, workerName = 'cloud-mail' } = params;
-		// 优先从请求参数获取，否则从环境变量获取
-		let cfApiToken = params.cfApiToken || c.env.cfApiToken;
+		// 支持两种认证方式
+		const cfApiToken = params.cfApiToken || c.env.cfApiToken;
+		const cfApiKey = params.cfApiKey || c.env.cfApiKey;
+		const cfEmail = params.cfEmail || c.env.cfEmail;
 
 		if (!domain) {
 			throw new BizError('Missing required parameter: domain');
 		}
 
-		if (!cfApiToken) {
-			throw new BizError('Missing cfApiToken: provide in request body or environment variable');
-		}
+		const authHeaders = this.getAuthHeaders(cfApiToken, cfApiKey, cfEmail);
 
-		// 移除可能存在的 "Bearer " 前缀
-		cfApiToken = cfApiToken.replace(/^Bearer\s+/i, '').trim();
+		const zoneId = await this.getZoneId(authHeaders, domain);
 
-		const zoneId = await this.getZoneId(cfApiToken, domain);
+		await this.enableEmailRouting(authHeaders, zoneId);
 
-		await this.enableEmailRouting(cfApiToken, zoneId);
-
-		await this.setCatchAllRule(cfApiToken, zoneId, workerName);
+		await this.setCatchAllRule(authHeaders, zoneId, workerName);
 
 		return { success: true, domain, zoneId };
 	},
 
-	async getZoneId(cfApiToken, domain) {
+	getAuthHeaders(cfApiToken, cfApiKey, cfEmail) {
+		// 方式1: API Token (推荐)
+		if (cfApiToken) {
+			const token = cfApiToken.replace(/^Bearer\s+/i, '').trim();
+			return { 'Authorization': `Bearer ${token}` };
+		}
+		// 方式2: Global API Key + Email
+		if (cfApiKey && cfEmail) {
+			return {
+				'X-Auth-Key': cfApiKey,
+				'X-Auth-Email': cfEmail
+			};
+		}
+		throw new BizError('Missing auth: provide cfApiToken or (cfApiKey + cfEmail)');
+	},
+
+	async getZoneId(authHeaders, domain) {
 		const response = await fetch(`${CF_API_BASE}/zones?name=${domain}`, {
-			headers: {
-				'Authorization': `Bearer ${cfApiToken}`,
-				'Content-Type': 'application/json'
-			}
+			headers: { ...authHeaders, 'Content-Type': 'application/json' }
 		});
 
 		const data = await response.json();
@@ -46,13 +56,10 @@ const cloudflareService = {
 		return data.result[0].id;
 	},
 
-	async enableEmailRouting(cfApiToken, zoneId) {
+	async enableEmailRouting(authHeaders, zoneId) {
 		const response = await fetch(`${CF_API_BASE}/zones/${zoneId}/email/routing/enable`, {
 			method: 'POST',
-			headers: {
-				'Authorization': `Bearer ${cfApiToken}`,
-				'Content-Type': 'application/json'
-			}
+			headers: { ...authHeaders, 'Content-Type': 'application/json' }
 		});
 
 		const data = await response.json();
@@ -65,13 +72,10 @@ const cloudflareService = {
 		return data;
 	},
 
-	async setCatchAllRule(cfApiToken, zoneId, workerName) {
+	async setCatchAllRule(authHeaders, zoneId, workerName) {
 		const response = await fetch(`${CF_API_BASE}/zones/${zoneId}/email/routing/rules/catch_all`, {
 			method: 'PUT',
-			headers: {
-				'Authorization': `Bearer ${cfApiToken}`,
-				'Content-Type': 'application/json'
-			},
+			headers: { ...authHeaders, 'Content-Type': 'application/json' },
 			body: JSON.stringify({
 				actions: [{ type: 'worker', value: [workerName] }],
 				matchers: [{ type: 'all' }],
