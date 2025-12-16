@@ -6,14 +6,15 @@ const cloudflareService = {
 
 	async addDomain(c, params) {
 		const { domain, workerName = 'cloud-mail' } = params;
-		let cfApiToken = c.env.cfApiToken;
+		// 优先从请求参数获取，否则从环境变量获取
+		let cfApiToken = params.cfApiToken || c.env.cfApiToken;
 
 		if (!domain) {
 			throw new BizError('Missing required parameter: domain');
 		}
 
 		if (!cfApiToken) {
-			throw new BizError('Missing environment variable: cfApiToken');
+			throw new BizError('Missing cfApiToken: provide in request body or environment variable');
 		}
 
 		// 移除可能存在的 "Bearer " 前缀
