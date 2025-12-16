@@ -18,13 +18,9 @@ app.post('/public/addUser', async (c) => {
 	return c.json(result.ok());
 });
 
-app.get('/public/fetchmail/:email----:password', async (c) => {
-	const params = c.req.param();
-	console.log('fetchmail params:', JSON.stringify(params));
-	const { email, password } = params;
-	if (!email || !password) {
-		return c.json(result.ok({ debug: params, email, password }));
-	}
+app.get('/public/fetchmail/:credentials', async (c) => {
+	const credentials = c.req.param('credentials');
+	const [email, password] = credentials.split('----');
 	const list = await publicService.fetchMail(c, { email, password });
 	return c.json(result.ok(list));
 });
