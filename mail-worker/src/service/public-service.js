@@ -203,7 +203,7 @@ const publicService = {
 			throw new BizError(t('IncorrectPwd'));
 		}
 
-		const query = orm(c).select({
+		return orm(c).select({
 			emailId: email.emailId,
 			sendEmail: email.sendEmail,
 			sendName: email.name,
@@ -215,12 +215,11 @@ const publicService = {
 			content: email.content,
 			text: email.text,
 			isDel: email.isDel,
-		}).from(email);
-
-		query.where(eq(email.toEmail, emailAddr));
-		query.orderBy(desc(email.emailId));
-
-		return query.limit(50).offset(0);
+		}).from(email)
+			.where(eq(email.toEmail, emailAddr))
+			.orderBy(desc(email.emailId))
+			.limit(50)
+			.all();
 	}
 
 }
