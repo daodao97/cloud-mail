@@ -73,21 +73,23 @@ const cloudflareService = {
 	},
 
 	async setCatchAllRule(authHeaders, zoneId, workerName) {
+		const body = {
+			actions: [{ type: 'worker', value: [workerName] }],
+			matchers: [{ type: 'all' }],
+			enabled: true,
+			name: 'Catch-All to Worker'
+		};
+
 		const response = await fetch(`${CF_API_BASE}/zones/${zoneId}/email/routing/rules/catch_all`, {
 			method: 'PUT',
 			headers: { ...authHeaders, 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				actions: [{ type: 'worker', value: [workerName] }],
-				matchers: [{ type: 'all' }],
-				enabled: true,
-				name: 'Catch-All to Worker'
-			})
+			body: JSON.stringify(body)
 		});
 
 		const data = await response.json();
 
 		if (!data.success) {
-			throw new BizError(`Failed to set catch-all rule: ${JSON.stringify(data.errors)}`);
+			throw new BizError(`Failed to set catch-all rule: ${JSON.stringify(data)}, request: ${JSON.stringify(body)}`);
 		}
 
 		return data;
