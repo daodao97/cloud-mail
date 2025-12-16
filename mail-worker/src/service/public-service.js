@@ -95,16 +95,18 @@ const publicService = {
 	},
 
 	async addUser(c, params) {
-		const { list } = params;
+		const { list, domains } = params;
+		// 优先使用请求参数中的 domains，否则使用环境变量
+		const allowedDomains = domains || c.env.domain || [];
 
-		if (list.length === 0) return;
+		if (!list || list.length === 0) return;
 
 		for (const emailRow of list) {
 			if (!verifyUtils.isEmail(emailRow.email)) {
 				throw new BizError(t('notEmail'));
 			}
 
-			if (!c.env.domain.includes(emailUtils.getDomain(emailRow.email))) {
+			if (!allowedDomains.includes(emailUtils.getDomain(emailRow.email))) {
 				throw new BizError(t('notEmailDomain'));
 			}
 
