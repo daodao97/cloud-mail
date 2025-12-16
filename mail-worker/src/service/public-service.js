@@ -14,6 +14,7 @@ import { isDel, roleConst } from '../const/entity-const';
 import email from '../entity/email';
 import userService from './user-service';
 import KvConst from '../const/kv-const';
+import domainUtils from '../utils/domain-utils';
 
 const publicService = {
 
@@ -99,11 +100,7 @@ const publicService = {
 
 		if (!list || list.length === 0) return;
 
-		// 从 KV 获取域名列表，合并环境变量中的域名
-		const kvDomainsStr = await c.env.kv.get(KvConst.DOMAINS);
-		const kvDomains = kvDomainsStr ? JSON.parse(kvDomainsStr) : [];
-		const envDomains = c.env.domain || [];
-		const allowedDomains = [...new Set([...kvDomains, ...envDomains])];
+		const allowedDomains = await domainUtils.getAllowedDomains(c);
 
 		for (const emailRow of list) {
 			if (!verifyUtils.isEmail(emailRow.email)) {

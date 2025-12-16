@@ -8,6 +8,7 @@ import constant from '../const/constant';
 import BizError from '../error/biz-error';
 import { t } from '../i18n/i18n'
 import verifyRecordService from './verify-record-service';
+import domainUtils from '../utils/domain-utils';
 
 const settingService = {
 
@@ -26,22 +27,14 @@ const settingService = {
 
 		const setting = await c.env.kv.get(KvConst.SETTING, { type: 'json' });
 
-		let domainList = c.env.domain;
+		// 从 KV 和环境变量获取域名列表
+		let domainList = await domainUtils.getAllowedDomains(c);
 
-		if (typeof domainList === 'string') {
-			try {
-				domainList = JSON.parse(domainList)
-			} catch (error) {
-				throw new BizError(t('notJsonDomain'));
-			}
-		}
-
-		if (!c.env.domain) {
+		if (!domainList || domainList.length === 0) {
 			throw new BizError(t('noDomainVariable'));
 		}
 
-		domainList = domainList.map(item => '@' + item);
-		setting.domainList = domainList;
+		setting.domainList = domainList.map(item => '@' + item);
 
 
 		let linuxdoSwitch = c.env.linuxdo_switch;
