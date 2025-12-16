@@ -27,13 +27,16 @@ const cloudflareService = {
 
 	async getZoneId(cfApiToken, domain) {
 		const response = await fetch(`${CF_API_BASE}/zones?name=${domain}`, {
-			headers: { 'Authorization': `Bearer ${cfApiToken}` }
+			headers: {
+				'Authorization': `Bearer ${cfApiToken}`,
+				'Content-Type': 'application/json'
+			}
 		});
 
 		const data = await response.json();
 
 		if (!data.success || !data.result?.length) {
-			throw new BizError(`Zone not found for domain: ${domain}`);
+			throw new BizError(`Zone not found for domain: ${domain}, response: ${JSON.stringify(data)}`);
 		}
 
 		return data.result[0].id;
@@ -42,13 +45,17 @@ const cloudflareService = {
 	async enableEmailRouting(cfApiToken, zoneId) {
 		const response = await fetch(`${CF_API_BASE}/zones/${zoneId}/email/routing/enable`, {
 			method: 'POST',
-			headers: { 'Authorization': `Bearer ${cfApiToken}` }
+			headers: {
+				'Authorization': `Bearer ${cfApiToken}`,
+				'Content-Type': 'application/json'
+			}
 		});
 
 		const data = await response.json();
 
-		if (!data.success && !data.errors?.some(e => e.code === 1001)) {
-			throw new BizError(`Failed to enable email routing: ${JSON.stringify(data.errors)}`);
+		// 1001 = already enabled, 1002 = DNS records not configured
+		if (!data.success && !data.errors?.some(e => e.code === 1001 || e.code === 1002)) {
+			throw new BizError(`Failed to enable email routing: ${JSON.stringify(data)}`);
 		}
 
 		return data;
