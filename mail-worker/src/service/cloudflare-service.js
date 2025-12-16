@@ -1,4 +1,5 @@
 import BizError from '../error/biz-error';
+import KvConst from '../const/kv-const';
 
 const CF_API_BASE = 'https://api.cloudflare.com/client/v4';
 
@@ -28,7 +29,19 @@ const cloudflareService = {
 		// 3. 设置 Catch-All 规则
 		await this.setCatchAllRule(authHeaders, zoneId, workerName);
 
+		// 4. 将域名保存到 KV
+		await this.saveDomainToKv(c, domain);
+
 		return { success: true, domain, zoneId };
+	},
+
+	async saveDomainToKv(c, domain) {
+		const domainsStr = await c.env.kv.get(KvConst.DOMAINS);
+		const domains = domainsStr ? JSON.parse(domainsStr) : [];
+		if (!domains.includes(domain)) {
+			domains.push(domain);
+			await c.env.kv.put(KvConst.DOMAINS, JSON.stringify(domains));
+		}
 	},
 
 	async setupEmailDns(authHeaders, zoneId) {

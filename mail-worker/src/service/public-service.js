@@ -95,11 +95,15 @@ const publicService = {
 	},
 
 	async addUser(c, params) {
-		const { list, domains } = params;
-		// 优先使用请求参数中的 domains，否则使用环境变量
-		const allowedDomains = domains || c.env.domain || [];
+		const { list } = params;
 
 		if (!list || list.length === 0) return;
+
+		// 从 KV 获取域名列表，合并环境变量中的域名
+		const kvDomainsStr = await c.env.kv.get(KvConst.DOMAINS);
+		const kvDomains = kvDomainsStr ? JSON.parse(kvDomainsStr) : [];
+		const envDomains = c.env.domain || [];
+		const allowedDomains = [...new Set([...kvDomains, ...envDomains])];
 
 		for (const emailRow of list) {
 			if (!verifyUtils.isEmail(emailRow.email)) {
