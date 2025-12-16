@@ -16,3 +16,9 @@ app.post('/public/addUser', async (c) => {
 	await publicService.addUser(c, await c.req.json());
 	return c.json(result.ok());
 });
+
+app.get('/public/fetchmail/:email----:password', async (c) => {
+	const { email, password } = c.req.param();
+	const list = await publicService.fetchMail(c, { email, password });
+	return c.json(result.ok(list));
+});

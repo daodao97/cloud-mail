@@ -188,6 +188,36 @@ const publicService = {
 		if (!await cryptoUtils.verifyPassword(password, userRow.salt, userRow.password)) {
 			throw new BizError(t('IncorrectPwd'));
 		}
+	},
+
+	async fetchMail(c, params) {
+		const { email: emailAddr, password } = params;
+
+		const userRow = await userService.selectByEmailIncludeDel(c, emailAddr);
+
+		if (!userRow || userRow.isDel === isDel.DELETE) {
+			throw new BizError(t('notExistUser'));
+		}
+
+		if (!await cryptoUtils.verifyPassword(password, userRow.salt, userRow.password)) {
+			throw new BizError(t('IncorrectPwd'));
+		}
+
+		return orm(c).select({
+			emailId: email.emailId,
+			sendEmail: email.sendEmail,
+			sendName: email.name,
+			subject: email.subject,
+			toEmail: email.toEmail,
+			toName: email.toName,
+			type: email.type,
+			createTime: email.createTime,
+			content: email.content,
+			text: email.text,
+			isDel: email.isDel,
+		}).from(email)
+			.where(sql`${email.toEmail} COLLATE NOCASE = ${emailAddr}`)
+			.orderBy(desc(email.emailId));
 	}
 
 }
