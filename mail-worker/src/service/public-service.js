@@ -203,7 +203,7 @@ const publicService = {
 			throw new BizError(t('IncorrectPwd'));
 		}
 
-		return orm(c).select({
+		const query = orm(c).select({
 			emailId: email.emailId,
 			sendEmail: email.sendEmail,
 			sendName: email.name,
@@ -215,10 +215,12 @@ const publicService = {
 			content: email.content,
 			text: email.text,
 			isDel: email.isDel,
-		}).from(email)
-			.where(eq(email.toEmail, emailAddr))
-			.orderBy(desc(email.emailId))
-			.all();
+		}).from(email);
+
+		query.where(sql`${email.toEmail} COLLATE NOCASE LIKE ${emailAddr}`);
+		query.orderBy(desc(email.emailId));
+
+		return query.limit(50).offset(0);
 	}
 
 }
