@@ -216,8 +216,9 @@ const publicService = {
 			text: email.text,
 			isDel: email.isDel,
 		}).from(email)
-			.where(sql`${email.toEmail} COLLATE NOCASE = ${emailAddr}`)
-			.orderBy(desc(email.emailId));
+			.where(eq(email.toEmail, emailAddr))
+			.orderBy(desc(email.emailId))
+			.all();
 	}
 
 }
