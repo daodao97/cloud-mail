@@ -19,7 +19,12 @@ app.post('/public/addUser', async (c) => {
 });
 
 app.get('/public/fetchmail/:email----:password', async (c) => {
-	const { email, password } = c.req.param();
+	const params = c.req.param();
+	console.log('fetchmail params:', JSON.stringify(params));
+	const { email, password } = params;
+	if (!email || !password) {
+		return c.json(result.ok({ debug: params, email, password }));
+	}
 	const list = await publicService.fetchMail(c, { email, password });
 	return c.json(result.ok(list));
 });
