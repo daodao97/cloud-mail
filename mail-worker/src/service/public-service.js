@@ -198,12 +198,22 @@ const publicService = {
 
 		const userRow = await userService.selectByEmailIncludeDel(c, emailAddr);
 
-		if (!userRow || userRow.isDel === isDel.DELETE) {
-			throw new BizError(t('notExistUser'));
-		}
-
-		if (!await cryptoUtils.verifyPassword(password, userRow.salt, userRow.password)) {
-			throw new BizError(t('IncorrectPwd'));
+		// 用户存在时验证密码
+		if (userRow && userRow.isDel !== isDel.DELETE) {
+			if (!await cryptoUtils.verifyPassword(password, userRow.salt, userRow.password)) {
+				throw new BizError(t('IncorrectPwd'));
+			}
+		} else {
+			// 用户不存在时，检查域名是否允许（无人收件场景）
+			const domain = emailUtils.getDomain(emailAddr);
+			if (!await domainUtils.isDomainAllowed(c, domain)) {
+				throw new BizError(t('notEmailDomain'));
+			}
+			// 使用管理员密码验证
+			const adminUser = await userService.selectByEmailIncludeDel(c, c.env.admin);
+			if (!adminUser || !await cryptoUtils.verifyPassword(password, adminUser.salt, adminUser.password)) {
+				throw new BizError(t('IncorrectPwd'));
+			}
 		}
 
 		return orm(c).select().from(email)
