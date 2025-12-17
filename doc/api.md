@@ -142,6 +142,21 @@ GET /api/public/fetchmail/user@example.com----mypassword
 
 ---
 
+### 获取支持的域名列表
+```
+GET /api/public/domainList
+```
+
+**返回示例：**
+```json
+{
+  "code": 200,
+  "data": ["example.com", "mail.example.com"]
+}
+```
+
+---
+
 ### 添加邮件域名
 ```
 POST /api/public/addDomain
