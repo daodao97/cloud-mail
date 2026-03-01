@@ -21,7 +21,21 @@ app.post('/public/addUser', async (c) => {
 
 app.get('/public/fetchmail/:credentials', async (c) => {
 	const credentials = c.req.param('credentials');
-	const [email, password] = credentials.split('----');
+	let email = '';
+	let password = '';
+
+	if (credentials.includes('----')) {
+		const parts = credentials.split('----');
+		email = parts[0] || '';
+		password = parts.slice(1).join('----');
+	} else {
+		const separatorIndex = credentials.indexOf(':');
+		if (separatorIndex !== -1) {
+			email = credentials.slice(0, separatorIndex);
+			password = credentials.slice(separatorIndex + 1);
+		}
+	}
+
 	const list = await publicService.fetchMail(c, { email, password });
 	return c.json(result.ok(list));
 });
