@@ -33,12 +33,13 @@ import {defineOptions, h, onMounted, reactive, ref, watch} from "vue";
 import {sleep} from "@/utils/time-utils.js";
 import router from "@/router/index.js";
 import {Icon} from "@iconify/vue";
-import {AccountAllReceiveEnum} from "@/enums/account-enum.js";
+import { useRoute } from 'vue-router'
 
 defineOptions({
   name: 'email'
 })
 
+const route = useRoute();
 const emailStore = useEmailStore();
 const accountStore = useAccountStore();
 const settingStore = useSettingStore();
@@ -75,9 +76,17 @@ const existIds = new Set();
 
 async function latest() {
   while (true) {
+
+    let autoRefresh = settingStore.settings.autoRefresh;
+    await sleep(autoRefresh > 1 ? autoRefresh * 1000 : 3000);
+
+    if (route.name !== 'email') {
+      continue;
+    }
+
     const latestId = scroll.value.latestEmail?.emailId
 
-    if (!scroll.value.firstLoad && settingStore.settings.autoRefreshTime) {
+    if (!scroll.value.firstLoad && autoRefresh > 1) {
       try {
         const accountId = accountStore.currentAccountId
         const allReceive = scroll.value.latestEmail?.allReceive
@@ -103,18 +112,6 @@ async function latest() {
                 existIds.add(email.emailId)
                 scroll.value.addItem(email)
 
-                if (innerWidth > 1367) {
-                  ElNotification({
-                    type: 'primary',
-                    message: `<div style="cursor: pointer;"><div style="overflow: hidden;white-space: nowrap;text-overflow: ellipsis; font-weight: bold;font-size: 16px;margin-bottom: 5px;">${email.name}</div><div style="color: teal;">${email.subject}</div></div>`,
-                    position: 'bottom-right',
-                    dangerouslyUseHTMLString: true,
-                    onClick: () => {
-                      jumpContent(email);
-                    }
-                  })
-                }
-
                 await sleep(50)
               }
 
@@ -124,10 +121,12 @@ async function latest() {
 
         }
       } catch (e) {
+        if (e.code === 401 || e.code === 403) {
+          settingStore.settings.autoRefresh = 0;
+        }
         console.error(e)
       }
     }
-    await sleep(settingStore.settings.autoRefreshTime * 1000)
   }
 }
 
