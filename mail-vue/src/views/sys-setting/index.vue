@@ -743,9 +743,9 @@
       </el-dialog>
       <el-dialog v-model="cfSettingShow" title="Cloudflare" width="340" @closed="resetCfForm">
         <form>
-          <el-input class="dialog-input" type="text" :placeholder="setting.cfApiToken || 'API Token'" v-model="cfForm.cfApiToken"/>
-          <el-input class="dialog-input" type="text" :placeholder="setting.cfApiKey || 'API Key'" v-model="cfForm.cfApiKey"/>
-          <el-input style="margin-bottom: 10px" type="text" :placeholder="setting.cfEmail || 'Email'" v-model="cfForm.cfEmail"/>
+          <el-input class="dialog-input" type="text" placeholder="API Token" v-model="cfForm.cfApiToken"/>
+          <el-input class="dialog-input" type="text" placeholder="API Key" v-model="cfForm.cfApiKey"/>
+          <el-input style="margin-bottom: 10px" type="text" placeholder="Email" v-model="cfForm.cfEmail"/>
           <el-button type="primary" style="width: 100%;" :loading="settingLoading" @click="saveCfSettings">{{ t('save') }}</el-button>
         </form>
       </el-dialog>
@@ -952,17 +952,17 @@ function resetCfForm() {
 
 function openCfSetting() {
   if (settingLoading.value) return
-  cfForm.cfApiToken = ''
-  cfForm.cfApiKey = ''
+  cfForm.cfApiToken = setting.value.cfApiToken || ''
+  cfForm.cfApiKey = setting.value.cfApiKey || ''
   cfForm.cfEmail = setting.value.cfEmail || ''
   cfSettingShow.value = true
 }
 
 function saveCfSettings() {
   const form = {}
-  if (cfForm.cfApiToken) form.cfApiToken = cfForm.cfApiToken
-  if (cfForm.cfApiKey) form.cfApiKey = cfForm.cfApiKey
-  if (cfForm.cfEmail) form.cfEmail = cfForm.cfEmail
+  if (cfForm.cfApiToken && cfForm.cfApiToken !== setting.value.cfApiToken) form.cfApiToken = cfForm.cfApiToken
+  if (cfForm.cfApiKey && cfForm.cfApiKey !== setting.value.cfApiKey) form.cfApiKey = cfForm.cfApiKey
+  if (cfForm.cfEmail !== setting.value.cfEmail) form.cfEmail = cfForm.cfEmail
   editSetting(form)
 }
 
