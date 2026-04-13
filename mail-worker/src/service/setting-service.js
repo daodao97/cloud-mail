@@ -128,6 +128,12 @@ const settingService = {
 			params.emailPrefixFilter = params.emailPrefixFilter + '';
 		}
 
+		['cfApiToken', 'cfApiKey', 'cfEmail'].forEach((key) => {
+			if (params[key] === null || params[key] === undefined) {
+				delete params[key];
+			}
+		});
+
 		params.resendTokens = JSON.stringify(resendTokens);
 		await orm(c).update(setting).set({ ...params }).returning().get();
 		await this.refresh(c);
