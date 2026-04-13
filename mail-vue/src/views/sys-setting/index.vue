@@ -241,7 +241,7 @@
                 <div><span>API Token</span></div>
                 <div class="bot-verify">
                   <span>{{ setting.cfApiToken ? '••••••••' : '' }}</span>
-                  <el-button class="opt-button" size="small" type="primary" @click="cfSettingShow = true">
+                  <el-button class="opt-button" size="small" type="primary" @click="openCfSetting">
                     <Icon icon="fluent:settings-48-regular" width="16" height="16"/>
                   </el-button>
                 </div>
@@ -743,9 +743,9 @@
       </el-dialog>
       <el-dialog v-model="cfSettingShow" title="Cloudflare" width="340" @closed="resetCfForm">
         <form>
-          <el-input class="dialog-input" type="text" placeholder="API Token" v-model="cfForm.cfApiToken"/>
-          <el-input class="dialog-input" type="text" placeholder="API Key" v-model="cfForm.cfApiKey"/>
-          <el-input style="margin-bottom: 10px" type="text" placeholder="Email" v-model="cfForm.cfEmail"/>
+          <el-input class="dialog-input" type="text" :placeholder="setting.cfApiToken || 'API Token'" v-model="cfForm.cfApiToken"/>
+          <el-input class="dialog-input" type="text" :placeholder="setting.cfApiKey || 'API Key'" v-model="cfForm.cfApiKey"/>
+          <el-input style="margin-bottom: 10px" type="text" :placeholder="setting.cfEmail || 'Email'" v-model="cfForm.cfEmail"/>
           <el-button type="primary" style="width: 100%;" :loading="settingLoading" @click="saveCfSettings">{{ t('save') }}</el-button>
         </form>
       </el-dialog>
@@ -948,6 +948,14 @@ function resetCfForm() {
   cfForm.cfApiToken = ''
   cfForm.cfApiKey = ''
   cfForm.cfEmail = ''
+}
+
+function openCfSetting() {
+  if (settingLoading.value) return
+  cfForm.cfApiToken = ''
+  cfForm.cfApiKey = ''
+  cfForm.cfEmail = setting.value.cfEmail || ''
+  cfSettingShow.value = true
 }
 
 function saveCfSettings() {
@@ -1335,6 +1343,9 @@ function change(e) {
   delete settingForm.secretKey
   delete settingForm.s3AccessKey
   delete settingForm.s3SecretKey
+  delete settingForm.cfApiToken
+  delete settingForm.cfApiKey
+  delete settingForm.cfEmail
   delete settingForm.resendTokens
   editSetting(settingForm, false)
 }
