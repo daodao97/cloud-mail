@@ -66,6 +66,9 @@ const settingService = {
 		setting.linuxdoClientId = c.env.linuxdo_client_id;
 		setting.linuxdoCallbackUrl = c.env.linuxdo_callback_url;
 		setting.linuxdoSwitch = linuxdoSwitch;
+		setting.cfApiToken = setting.cfApiToken || c.env.cfApiToken || '';
+		setting.cfApiKey = setting.cfApiKey || c.env.cfApiKey || '';
+		setting.cfEmail = setting.cfEmail || c.env.cfEmail || '';
 
 		setting.emailPrefixFilter = setting.emailPrefixFilter.split(",").filter(Boolean);
 
