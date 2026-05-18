@@ -74,6 +74,33 @@
             </div>
           </div>
 
+          <!-- Supported Domains Card -->
+          <div class="settings-card domain-list-card">
+            <div class="card-title">{{ $t('currentDomains') }}</div>
+            <div class="card-content">
+              <div class="domain-list-head">
+                <div>
+                  <span>{{ $t('currentDomainsDesc', { count: supportedDomainList.length }) }}</span>
+                </div>
+                <el-button class="opt-button" size="small" type="primary" :loading="domainListLoading"
+                           @click="loadSupportedDomains()">
+                  <Icon icon="material-symbols:refresh-rounded" width="16" height="16"/>
+                </el-button>
+              </div>
+              <div class="domain-tags" v-if="supportedDomainList.length">
+                <el-tag
+                    v-for="domain in supportedDomainList"
+                    :key="domain"
+                    type="success"
+                    effect="plain"
+                >
+                  {{ domain }}
+                </el-tag>
+              </div>
+              <el-empty v-else :description="$t('noSupportedDomains')" :image-size="60"/>
+            </div>
+          </div>
+
           <!-- Personalization Settings Card -->
           <div class="settings-card">
             <div class="card-title">{{ $t('customization') }}</div>
@@ -848,7 +875,7 @@
 
 <script setup>
 import {computed, defineOptions, nextTick, reactive, ref} from "vue";
-import {deleteBackground, setBackground, setBlackList, settingQuery, settingSet} from "@/request/setting.js";
+import {deleteBackground, domainList, setBackground, setBlackList, settingQuery, settingSet} from "@/request/setting.js";
 import {useSettingStore} from "@/store/setting.js";
 import {useUiStore} from "@/store/ui.js";
 import {useUserStore} from "@/store/user.js";
@@ -899,6 +926,8 @@ const clearS3Loading = ref(false)
 const r2DomainInput = ref('')
 const loginOpacity = ref(0)
 const loginDarkenFactor = ref(0)
+const supportedDomainList = ref([])
+const domainListLoading = ref(false)
 const minEmailPrefix = ref(0)
 const emailPrefixFilter = ref([])
 const backgroundUrl = ref('')
@@ -995,6 +1024,8 @@ function getSettings() {
   settingQuery().then(settingData => {
     setting.value = settingData
     settingStore.domainList = settingData.domainList;
+    setSupportedDomains(settingData.domainList)
+    loadSupportedDomains(settingData.domainList)
     resendTokenForm.domain = setting.value.domainList[0]
     loginOpacity.value = setting.value.loginOpacity
     loginDarkenFactor.value = normalizeFactor(setting.value.loginDarkenFactor)
@@ -1013,6 +1044,25 @@ function getSettings() {
     nextTick(() => {
       settingReady.value = true
     })
+  })
+}
+
+function normalizeDomainList(list = []) {
+  return list.map(item => `${item}`.replace(/^@/, '')).filter(Boolean)
+}
+
+function setSupportedDomains(list = []) {
+  supportedDomainList.value = normalizeDomainList(list)
+}
+
+function loadSupportedDomains(fallbackList = setting.value.domainList || []) {
+  domainListLoading.value = true
+  return domainList().then(list => {
+    setSupportedDomains(list)
+  }).catch(() => {
+    setSupportedDomains(fallbackList)
+  }).finally(() => {
+    domainListLoading.value = false
   })
 }
 
@@ -1703,6 +1753,20 @@ function editSetting(settingForm, refreshStatus = true) {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.domain-list-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+  color: var(--el-text-color-secondary);
+}
+
+.domain-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .setting-item {

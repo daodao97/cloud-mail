@@ -8,6 +8,10 @@ export function settingQuery() {
     return http.get('/setting/query')
 }
 
+export function domainList() {
+    return http.get('/public/domainList', { noMsg: true })
+}
+
 export function websiteConfig() {
     return http.get('/setting/websiteConfig')
 }

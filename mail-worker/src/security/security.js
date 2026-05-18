@@ -44,6 +44,7 @@ const requirePerms = [
 	'/setting/deleteBackground',
 	'/setting/set',
 	'/setting/query',
+	'/public/domainList',
 	'/user/delete',
 	'/user/setPwd',
 	'/user/setStatus',
@@ -81,7 +82,7 @@ const premKey = {
 	'user:delete': ['/user/delete','/user/deleteAccount'],
 	'all-email:query': ['/allEmail/list','/allEmail/latest'],
 	'all-email:delete': ['/allEmail/delete','/allEmail/batchDelete'],
-	'setting:query': ['/setting/query'],
+	'setting:query': ['/setting/query', '/public/domainList'],
 	'setting:set': ['/setting/set', '/setting/setBackground','/setting/deleteBackground','/setting/setBlacklist'],
 	'analysis:query': ['/analysis/echarts'],
 	'reg-key:add': ['/regKey/add'],
@@ -105,10 +106,12 @@ app.use('*', async (c, next) => {
 
 		const userPublicToken = await c.env.kv.get(KvConst.PUBLIC_KEY);
 		const publicToken = c.req.header(constant.TOKEN_HEADER);
-		if (publicToken !== userPublicToken) {
+		if (publicToken && publicToken === userPublicToken) {
+			return await next();
+		}
+		if (!path.startsWith('/public/domainList')) {
 			throw new BizError(t('publicTokenFail'), 401);
 		}
-		return await next();
 	}
 
 
