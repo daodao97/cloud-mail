@@ -7,7 +7,8 @@ const CF_API_BASE = 'https://api.cloudflare.com/client/v4';
 const cloudflareService = {
 
 	async addDomain(c, params) {
-		const { domain, workerName = 'cloud-mail' } = params;
+		const { workerName = 'cloud-mail' } = params;
+		const domain = this.normalizeDomain(params.domain);
 
 		// 从设置中读取 CF 配置
 		const setting = await settingService.query(c);
@@ -21,21 +22,21 @@ const cloudflareService = {
 
 		const authHeaders = this.getAuthHeaders(cfApiToken, cfApiKey, cfEmail);
 
-		const zoneId = await this.getZoneId(authHeaders, domain);
+		const zone = await this.getZone(authHeaders, domain);
 
 		// 1. 获取并添加 Email Routing DNS 记录
-		await this.setupEmailDns(authHeaders, zoneId);
+		await this.setupEmailDns(authHeaders, zone.id, domain, zone.name);
 
 		// 2. 启用 Email Routing
-		await this.enableEmailRouting(authHeaders, zoneId);
+		await this.enableEmailRouting(authHeaders, zone.id);
 
 		// 3. 设置 Catch-All 规则
-		await this.setCatchAllRule(authHeaders, zoneId, workerName);
+		await this.setCatchAllRule(authHeaders, zone.id, workerName);
 
 		// 4. 将域名保存到 KV
 		await this.saveDomainToKv(c, domain);
 
-		return { success: true, domain, zoneId };
+		return { success: true, domain, zoneId: zone.id, zoneName: zone.name };
 	},
 
 	async saveDomainToKv(c, domain) {
@@ -47,7 +48,7 @@ const cloudflareService = {
 		}
 	},
 
-	async setupEmailDns(authHeaders, zoneId) {
+	async setupEmailDns(authHeaders, zoneId, domain, zoneName) {
 		// 获取需要的 DNS 记录
 		const dnsResponse = await fetch(`${CF_API_BASE}/zones/${zoneId}/email/routing/dns`, {
 			headers: { ...authHeaders, 'Content-Type': 'application/json' }
@@ -60,8 +61,38 @@ const cloudflareService = {
 
 		// 添加每条 DNS 记录
 		for (const record of dnsData.result || []) {
-			await this.createDnsRecord(authHeaders, zoneId, record);
+			await this.createDnsRecord(authHeaders, zoneId, this.buildEmailDnsRecord(record, domain, zoneName));
 		}
+	},
+
+	buildEmailDnsRecord(record, domain, zoneName) {
+		return {
+			...record,
+			name: this.mapRecordNameToDomain(record.name, domain, zoneName)
+		};
+	},
+
+	mapRecordNameToDomain(recordName, domain, zoneName) {
+		const name = this.normalizeDnsName(recordName);
+		const zone = this.normalizeDnsName(zoneName);
+
+		if (!name || name === '@' || name === zone) {
+			return domain;
+		}
+
+		if (name.endsWith(`.${zone}`)) {
+			return `${name.slice(0, -zone.length)}${domain}`;
+		}
+
+		return name;
+	},
+
+	normalizeDnsName(name) {
+		return (name || '').trim().replace(/\.$/, '').toLowerCase();
+	},
+
+	normalizeDomain(domain) {
+		return (domain || '').trim().replace(/^@+/, '').replace(/\.$/, '').toLowerCase();
 	},
 
 	async createDnsRecord(authHeaders, zoneId, record) {
@@ -100,18 +131,43 @@ const cloudflareService = {
 		throw new BizError('Missing auth: provide cfApiToken or (cfApiKey + cfEmail)');
 	},
 
-	async getZoneId(authHeaders, domain) {
-		const response = await fetch(`${CF_API_BASE}/zones?name=${domain}`, {
-			headers: { ...authHeaders, 'Content-Type': 'application/json' }
-		});
+	async getZone(authHeaders, domain) {
+		let lastResponse = null;
 
-		const data = await response.json();
+		for (const candidate of this.getZoneCandidates(domain)) {
+			const response = await fetch(`${CF_API_BASE}/zones?name=${encodeURIComponent(candidate)}`, {
+				headers: { ...authHeaders, 'Content-Type': 'application/json' }
+			});
 
-		if (!data.success || !data.result?.length) {
-			throw new BizError(`Zone not found for domain: ${domain}, response: ${JSON.stringify(data)}`);
+			const data = await response.json();
+			lastResponse = data;
+
+			if (!data.success) {
+				throw new BizError(`Failed to query Cloudflare zone for domain: ${candidate}, response: ${JSON.stringify(data)}`);
+			}
+
+			if (data.result?.length) {
+				return data.result[0];
+			}
 		}
 
-		return data.result[0].id;
+		throw new BizError(`Zone not found for domain: ${domain}, tried: ${this.getZoneCandidates(domain).join(', ')}, response: ${JSON.stringify(lastResponse)}`);
+	},
+
+	async getZoneId(authHeaders, domain) {
+		const zone = await this.getZone(authHeaders, domain);
+		return zone.id;
+	},
+
+	getZoneCandidates(domain) {
+		const labels = domain.split('.').filter(Boolean);
+		const candidates = [];
+
+		for (let index = 0; index <= labels.length - 2; index++) {
+			candidates.push(labels.slice(index).join('.'));
+		}
+
+		return candidates;
 	},
 
 	async enableEmailRouting(authHeaders, zoneId) {
