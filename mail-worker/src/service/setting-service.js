@@ -9,6 +9,7 @@ import BizError from '../error/biz-error';
 import {t} from '../i18n/i18n'
 import verifyRecordService from './verify-record-service';
 import domainUtils from '../utils/domain-utils';
+import userContext from '../security/user-context';
 
 const settingService = {
 
@@ -50,8 +51,6 @@ const settingService = {
 		} else {
 			linuxdoSwitch = false
 		}
-
-		console.log(projectLink)
 
 		if (typeof projectLink === 'string' && projectLink === 'false') {
 			projectLink = false
@@ -99,6 +98,7 @@ const settingService = {
 		settingRow.cfApiToken = settingRow.cfApiToken ? `${settingRow.cfApiToken.slice(0, 12)}******` : null;
 		settingRow.cfApiKey = settingRow.cfApiKey ? `${settingRow.cfApiKey.slice(0, 12)}******` : null;
 		settingRow.hasR2 = !!c.env.r2
+		settingRow.hasCfEmail = !!c.env.email
 
 		let regVerifyOpen = false
 		let addVerifyOpen = false
@@ -136,6 +136,15 @@ const settingService = {
 				delete params[key];
 			}
 		});
+
+		if (Array.isArray(params.aiCodeFilter)) {
+			params.aiCodeFilter = params.aiCodeFilter + '';
+		}
+
+		if (params.loginDarkenFactor !== undefined) {
+			const factor = Number(params.loginDarkenFactor);
+			params.loginDarkenFactor = Number.isNaN(factor) ? 0 : Math.min(1, Math.max(0, factor));
+		}
 
 		params.resendTokens = JSON.stringify(resendTokens);
 		await orm(c).update(setting).set({ ...params }).returning().get();
@@ -187,9 +196,18 @@ const settingService = {
 		return background;
 	},
 
+
+	async setBlacklist(c, params) {
+		const { blackSubject, blackContent, blackFrom  } = params
+		await orm(c).update(setting).set({ blackSubject, blackContent, blackFrom }).run();
+		await this.refresh(c);
+		return this.get(c);
+	},
+
 	async websiteConfig(c) {
 
 		const settingRow = await this.get(c, true);
+		const token = await userContext.getToken(c);
 
 		return {
 			register: settingRow.register,
@@ -204,7 +222,8 @@ const settingService = {
 			siteKey: settingRow.siteKey,
 			background: settingRow.background,
 			loginOpacity: settingRow.loginOpacity,
-			domainList: settingRow.domainList,
+			loginDarkenFactor: settingRow.loginDarkenFactor,
+			domainList: settingRow.loginDomain === 1 && !token ? [] : settingRow.domainList,
 			regKey: settingRow.regKey,
 			regVerifyOpen: settingRow.regVerifyOpen,
 			addVerifyOpen: settingRow.addVerifyOpen,
@@ -223,7 +242,8 @@ const settingService = {
 			minEmailPrefix: settingRow.minEmailPrefix,
 			projectLink: settingRow.projectLink
 		};
-	}
+	},
+
 };
 
 export default settingService;
