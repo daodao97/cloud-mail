@@ -115,7 +115,7 @@ jobs:
             sed -i '/\[\[routes\]\]/,/^$/d' "$CONFIG_FILE"
           fi
 
-	          if [ "$(printf '%s' "$CLOUDFLARE_EMAIL" | tr '[:upper:]' '[:lower:]')" = "true" ]; then
+          if [ "$(printf '%s' "$CLOUDFLARE_EMAIL" | tr '[:upper:]' '[:lower:]')" = "true" ]; then
             cat >> "$CONFIG_FILE" <<'EOF'
 
           [[send_email]]
