@@ -53,10 +53,11 @@ app.get('/public/mail/:credentials', async (c) => {
 		} catch (_) {
 			// 邮件正文仍可渲染；只有 {{domain}} 图片占位符无法被替换。
 		}
+		const credentialsPath = url.pathname.startsWith('/api/') ? url.pathname : `/api${url.pathname}`;
 		return c.html(fetchmailWebHtmlTemplate({
 			mails: list,
 			selectedEmailId: url.searchParams.get('emailId'),
-			credentialsPath: url.pathname,
+			credentialsPath,
 			r2Domain
 		}));
 	} catch (e) {
