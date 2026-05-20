@@ -3,6 +3,8 @@ import result from '../model/result';
 import publicService from '../service/public-service';
 import cloudflareService from '../service/cloudflare-service';
 import domainUtils from '../utils/domain-utils';
+import fetchmailWebHtmlTemplate from '../template/fetchmail-web-html';
+import settingService from '../service/setting-service';
 
 app.post('/public/genToken', async (c) => {
 	const data = await publicService.genToken(c, await c.req.json());
@@ -19,8 +21,7 @@ app.post('/public/addUser', async (c) => {
 	return c.json(result.ok());
 });
 
-app.get('/public/fetchmail/:credentials', async (c) => {
-	const credentials = c.req.param('credentials');
+function parseFetchmailCredentials(credentials) {
 	let email = '';
 	let password = '';
 
@@ -36,7 +37,39 @@ app.get('/public/fetchmail/:credentials', async (c) => {
 		}
 	}
 
-	const list = await publicService.fetchMail(c, { email, password });
+	return { email, password };
+}
+
+app.get('/public/mail/:credentials', async (c) => {
+	const credentials = c.req.param('credentials');
+	const params = parseFetchmailCredentials(credentials);
+	const url = new URL(c.req.url);
+	try {
+		const list = await publicService.fetchMail(c, params);
+		let r2Domain = '';
+		try {
+			const setting = await settingService.query(c);
+			r2Domain = setting.r2Domain || '';
+		} catch (_) {
+			// 邮件正文仍可渲染；只有 {{domain}} 图片占位符无法被替换。
+		}
+		return c.html(fetchmailWebHtmlTemplate({
+			mails: list,
+			selectedEmailId: url.searchParams.get('emailId'),
+			credentialsPath: url.pathname,
+			r2Domain
+		}));
+	} catch (e) {
+		if (e.name === 'BizError') {
+			return c.html(fetchmailWebHtmlTemplate({ error: e.message }), e.code || 500);
+		}
+		throw e;
+	}
+});
+
+app.get('/public/fetchmail/:credentials', async (c) => {
+	const credentials = c.req.param('credentials');
+	const list = await publicService.fetchMail(c, parseFetchmailCredentials(credentials));
 	return c.json(result.ok(list));
 });
 

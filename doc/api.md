@@ -142,6 +142,29 @@ GET /api/public/fetchmail/user@example.com----mypassword
 
 ---
 
+### Web 页面查看指定邮箱的邮件
+**无需认证（使用路径中的邮箱和密码校验）**
+
+```
+GET /api/public/mail/{email}----{password}
+GET /api/public/mail/{email}:{password}
+```
+
+**查询参数：**
+- `emailId`：可选，指定要打开的邮件 ID；不传默认显示最新一封
+
+**示例：**
+```
+GET /api/public/mail/user@example.com----mypassword
+GET /api/public/mail/user@example.com:mypassword?emailId=123
+```
+
+**说明：**
+- 与 `fetchmail` JSON 接口共用同一套邮箱/密码校验逻辑
+- 返回 HTML 邮件查看页面，左侧展示最近 50 封邮件，右侧直接渲染所选邮件正文
+
+---
+
 ### 获取支持的域名列表
 ```
 GET /api/public/domainList
