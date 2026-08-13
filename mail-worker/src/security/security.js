@@ -49,6 +49,7 @@ const requirePerms = [
 	'/setting/domain',
 	'/public/domainList',
 	'/public/addDomain',
+	'/setting/setBlacklist',
 	'/user/delete',
 	'/user/setPwd',
 	'/user/setStatus',

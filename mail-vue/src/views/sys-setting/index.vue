@@ -139,13 +139,6 @@
                                    :step="0.01" :max="1" :min="0"/>
                 </div>
               </div>
-              <div class="setting-item">
-                <div class="title-item"><span>{{ $t('backgroundDarken') }}</span></div>
-                <div>
-                  <el-input-number size="small" v-model="loginDarkenFactor" @change="darkenChange" :precision="2"
-                                   :step="0.01" :max="1" :min="0"/>
-                </div>
-              </div>
               <div class="setting-item personalized">
                 <div><span>{{ $t('loginBackground') }}</span></div>
                 <div>
@@ -611,7 +604,7 @@
           </div>
         </template>
         <div class="forward-set-body">
-          <el-input :placeholder="$t('tgBotToken')" v-model="tgBotToken"></el-input>
+          <el-input :placeholder="setting.tgBotToken || $t('tgBotToken')" v-model="tgBotToken"></el-input>
           <el-input-tag tag-type="warning" :placeholder="$t('toBotTokenDesc')" v-model="tgChatId"
                         @add-tag="addChatTag"></el-input-tag>
           <el-input tag-type="warning" :placeholder="$t('customDomainDesc')" v-model="customDomain" ></el-input>
@@ -950,7 +943,6 @@ const settingLoading = ref(false)
 const clearS3Loading = ref(false)
 const r2DomainInput = ref('')
 const loginOpacity = ref(0)
-const loginDarkenFactor = ref(0)
 const supportedDomainList = ref([])
 const domainListLoading = ref(false)
 const domainAddShow = ref(false)
@@ -1057,7 +1049,6 @@ function getSettings() {
     loadSupportedDomains(settingData.domainList)
     resendTokenForm.domain = setting.value.domainList[0]
     loginOpacity.value = setting.value.loginOpacity
-    loginDarkenFactor.value = normalizeFactor(setting.value.loginDarkenFactor)
     minEmailPrefix.value = setting.value.minEmailPrefix
     firstLoading.value = false
     backgroundUrl.value = setting.value.background?.startsWith('http') ? setting.value.background : ''
@@ -1269,7 +1260,7 @@ function closedSetBackground() {
 
 function openTgSetting() {
   tgBotStatus.value = setting.value.tgBotStatus
-  tgBotToken.value = setting.value.tgBotToken
+  tgBotToken.value = ''
   customDomain.value = setting.value.customDomain
   tgMsgFrom.value = setting.value.tgMsgFrom
   tgMsgText.value = setting.value.tgMsgText
@@ -1410,7 +1401,6 @@ function saveS3() {
 
 function tgBotSave() {
   const form = {
-    tgBotToken: tgBotToken.value,
     customDomain: customDomain.value,
     tgBotStatus: tgBotStatus.value,
     tgChatId: tgChatId.value + '',
@@ -1418,6 +1408,7 @@ function tgBotSave() {
     tgMsgText: tgMsgText.value,
     tgMsgTo: tgMsgTo.value
   }
+  if (tgBotToken.value) form.tgBotToken = tgBotToken.value
   editSetting(form)
 }
 
@@ -1442,19 +1433,6 @@ function doOpacityChange() {
   if (!settingReady.value) return
   const form = {}
   form.loginOpacity = loginOpacity.value
-  editSetting(form, true)
-}
-
-function normalizeFactor(value) {
-  const factor = Number(value ?? 0)
-  if (Number.isNaN(factor)) return 0
-  return Math.min(1, Math.max(0, factor))
-}
-
-function doDarkenChange() {
-  if (!settingReady.value) return
-  const form = {}
-  form.loginDarkenFactor = normalizeFactor(loginDarkenFactor.value)
   editSetting(form, true)
 }
 
@@ -1485,11 +1463,6 @@ function saveAiCodeFilter() {
 }
 
 const opacityChange = debounce(doOpacityChange, 1000, {
-  leading: false,
-  trailing: true
-})
-
-const darkenChange = debounce(doDarkenChange, 1000, {
   leading: false,
   trailing: true
 })
@@ -1676,6 +1649,7 @@ function change(e) {
   delete settingForm.cfApiToken
   delete settingForm.cfApiKey
   delete settingForm.cfEmail
+  delete settingForm.tgBotToken
   delete settingForm.resendTokens
   editSetting(settingForm, false)
 }
@@ -1730,7 +1704,6 @@ function editSetting(settingForm, refreshStatus = true) {
     aiCodeFilterShow.value = false
   }).catch((e) => {
     loginOpacity.value = setting.value.loginOpacity
-    loginDarkenFactor.value = normalizeFactor(setting.value.loginDarkenFactor)
     setting.value = {...setting.value, ...JSON.parse(backup)}
   }).finally(() => {
     settingLoading.value = false
