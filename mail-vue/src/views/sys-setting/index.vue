@@ -82,20 +82,27 @@
                 <div>
                   <span>{{ $t('currentDomainsDesc', { count: supportedDomainList.length }) }}</span>
                 </div>
-                <el-button class="opt-button" size="small" type="primary" :loading="domainListLoading"
-                           @click="loadSupportedDomains()">
-                  <Icon icon="material-symbols:refresh-rounded" width="16" height="16"/>
-                </el-button>
+                <div class="domain-list-actions">
+                  <el-button class="opt-button" size="small" type="primary" @click="domainAddShow = true">
+                    <Icon icon="material-symbols:add-rounded" width="16" height="16"/>
+                  </el-button>
+                  <el-button class="opt-button" size="small" type="primary" :loading="domainListLoading"
+                             @click="loadSupportedDomains()">
+                    <Icon icon="material-symbols:refresh-rounded" width="16" height="16"/>
+                  </el-button>
+                </div>
               </div>
               <div class="domain-tags" v-if="supportedDomainList.length">
-                <el-tag
-                    v-for="domain in supportedDomainList"
-                    :key="domain"
-                    type="success"
-                    effect="plain"
+                <el-tooltip
+                    v-for="item in supportedDomainList"
+                    :key="item.domain"
+                    :content="domainStatusDescription(item)"
+                    placement="top"
                 >
-                  {{ domain }}
-                </el-tag>
+                  <el-tag :type="domainTagType(item.status)" effect="plain">
+                    {{ item.domain }} · {{ $t(`domainStatus.${item.status}`) }}
+                  </el-tag>
+                </el-tooltip>
               </div>
               <el-empty v-else :description="$t('noSupportedDomains')" :image-size="60"/>
             </div>
@@ -522,6 +529,13 @@
           <el-button type="primary" :loading="settingLoading" @click="saveResendToken">{{ $t('save') }}</el-button>
         </form>
       </el-dialog>
+      <el-dialog v-model="domainAddShow" :title="$t('addSupportedDomain')" width="340" @closed="domainInput = ''">
+        <el-input v-model="domainInput" :placeholder="$t('domainDesc')" @keyup.enter="submitDomain"/>
+        <el-button type="primary" style="width: 100%; margin-top: 15px" :loading="domainAddLoading" @click="submitDomain">
+          {{ $t('add') }}
+        </el-button>
+      </el-dialog>
+
       <el-dialog v-model="r2DomainShow" :title="$t('addOsDomain')" width="340"
                  @closed="r2DomainInput = setting.r2Domain">
         <form>
@@ -875,7 +889,7 @@
 
 <script setup>
 import {computed, defineOptions, nextTick, reactive, ref} from "vue";
-import {deleteBackground, domainList, setBackground, setBlackList, settingQuery, settingSet} from "@/request/setting.js";
+import {addDomain, deleteBackground, domainStatusList, setBackground, setBlackList, settingQuery, settingSet} from "@/request/setting.js";
 import {useSettingStore} from "@/store/setting.js";
 import {useUiStore} from "@/store/ui.js";
 import {useUserStore} from "@/store/user.js";
@@ -928,6 +942,9 @@ const loginOpacity = ref(0)
 const loginDarkenFactor = ref(0)
 const supportedDomainList = ref([])
 const domainListLoading = ref(false)
+const domainAddShow = ref(false)
+const domainAddLoading = ref(false)
+const domainInput = ref('')
 const minEmailPrefix = ref(0)
 const emailPrefixFilter = ref([])
 const backgroundUrl = ref('')
@@ -1048,7 +1065,13 @@ function getSettings() {
 }
 
 function normalizeDomainList(list = []) {
-  return list.map(item => `${item}`.replace(/^@/, '')).filter(Boolean)
+  const normalized = list.map(item => {
+    if (typeof item === 'string') {
+      return {domain: item.replace(/^@/, ''), status: 'unchecked'}
+    }
+    return {...item, domain: `${item.domain || ''}`.replace(/^@/, '')}
+  }).filter(item => item.domain)
+  return [...new Map(normalized.map(item => [item.domain, item])).values()]
 }
 
 function setSupportedDomains(list = []) {
@@ -1057,12 +1080,44 @@ function setSupportedDomains(list = []) {
 
 function loadSupportedDomains(fallbackList = setting.value.domainList || []) {
   domainListLoading.value = true
-  return domainList().then(list => {
+  return domainStatusList().then(list => {
     setSupportedDomains(list)
   }).catch(() => {
     setSupportedDomains(fallbackList)
   }).finally(() => {
     domainListLoading.value = false
+  })
+}
+
+function domainTagType(status) {
+  return status === 'active' ? 'success' : status === 'inactive' ? 'danger' : 'info'
+}
+
+function domainStatusDescription(item) {
+  if (item.status === 'inactive' && item.zoneStatus) {
+    return t('domainStatusDetail', {status: item.zoneStatus})
+  }
+  return t(`domainStatus.${item.status}`)
+}
+
+function submitDomain() {
+  const domain = domainInput.value.trim().replace(/^@+/, '').replace(/\.$/, '').toLowerCase()
+  if (!isDomain(domain)) {
+    ElMessage.warning(t('invalidDomain'))
+    return
+  }
+
+  domainAddLoading.value = true
+  addDomain({domain}).then(async () => {
+    ElMessage.success(t('addDomainSuccess'))
+    domainAddShow.value = false
+    domainInput.value = ''
+    await loadSupportedDomains([...(setting.value.domainList || []), domain])
+    const refreshedDomains = supportedDomainList.value.map(item => `@${item.domain}`)
+    setting.value.domainList = refreshedDomains
+    settingStore.domainList = refreshedDomains
+  }).finally(() => {
+    domainAddLoading.value = false
   })
 }
 
@@ -1767,6 +1822,10 @@ function editSetting(settingForm, refreshStatus = true) {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.domain-list-actions {
+  display: flex;
 }
 
 .setting-item {

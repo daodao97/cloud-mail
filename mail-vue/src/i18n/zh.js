@@ -140,8 +140,17 @@ const zh = {
     multipleEmail: '多号模式',
     multipleEmailDesc: '开启后账号栏出现一个用户可以添加多个邮箱',
     currentDomains: '当前支持域名',
-    currentDomainsDesc: 'domainList 接口返回 {count} 个域名',
+    currentDomainsDesc: '共 {count} 个域名，状态基于 Cloudflare 托管信息',
     noSupportedDomains: '暂无支持的域名',
+    addSupportedDomain: '添加支持域名',
+    addDomainSuccess: '域名添加成功',
+    invalidDomain: '请输入有效的域名',
+    domainStatus: {
+      active: '正常',
+      inactive: '异常',
+      unchecked: '未检测'
+    },
+    domainStatusDetail: 'Cloudflare 状态：{status}',
     customization: '个性化设置',
     websiteTitle: '网站标题',
     loginBoxOpacity: '登录透明',

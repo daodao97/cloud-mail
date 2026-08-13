@@ -45,7 +45,9 @@ const requirePerms = [
 	'/setting/deleteBackground',
 	'/setting/set',
 	'/setting/query',
+	'/setting/domainStatus',
 	'/public/domainList',
+	'/public/addDomain',
 	'/user/delete',
 	'/user/setPwd',
 	'/user/setStatus',
@@ -83,8 +85,8 @@ const premKey = {
 	'user:delete': ['/user/delete','/user/deleteAccount'],
 	'all-email:query': ['/allEmail/list','/allEmail/latest'],
 	'all-email:delete': ['/allEmail/delete','/allEmail/batchDelete'],
-	'setting:query': ['/setting/query', '/public/domainList'],
-	'setting:set': ['/setting/set', '/setting/setBackground','/setting/deleteBackground','/setting/setBlacklist'],
+	'setting:query': ['/setting/query', '/setting/domainStatus', '/public/domainList'],
+	'setting:set': ['/setting/set', '/setting/setBackground','/setting/deleteBackground','/setting/setBlacklist', '/public/addDomain'],
 	'analysis:query': ['/analysis/echarts'],
 	'reg-key:add': ['/regKey/add'],
 	'reg-key:query': ['/regKey/list','/regKey/history'],
@@ -110,7 +112,7 @@ app.use('*', async (c, next) => {
 		if (publicToken && publicToken === userPublicToken) {
 			return await next();
 		}
-		if (!path.startsWith('/public/domainList')) {
+		if (!path.startsWith('/public/domainList') && !path.startsWith('/public/addDomain')) {
 			throw new BizError(t('publicTokenFail'), 401);
 		}
 	}

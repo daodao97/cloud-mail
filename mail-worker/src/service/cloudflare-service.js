@@ -1,10 +1,57 @@
 import BizError from '../error/biz-error';
 import KvConst from '../const/kv-const';
 import settingService from './setting-service';
+import domainUtils from '../utils/domain-utils';
 
 const CF_API_BASE = 'https://api.cloudflare.com/client/v4';
 
 const cloudflareService = {
+
+	async getDomainStatuses(c) {
+		const domains = await domainUtils.getAllowedDomains(c);
+		const setting = await settingService.query(c);
+		const cfApiToken = setting.cfApiToken || c.env.cfApiToken;
+		const cfApiKey = setting.cfApiKey || c.env.cfApiKey;
+		const cfEmail = setting.cfEmail || c.env.cfEmail;
+
+		let authHeaders;
+		try {
+			authHeaders = this.getAuthHeaders(cfApiToken, cfApiKey, cfEmail);
+		} catch (_) {
+			return domains.map(domain => ({ domain, status: 'unchecked' }));
+		}
+
+		return Promise.all(domains.map(domain => this.getDomainStatus(authHeaders, domain)));
+	},
+
+	async getDomainStatus(authHeaders, domain) {
+		try {
+			for (const candidate of this.getZoneCandidates(domain)) {
+				const response = await fetch(`${CF_API_BASE}/zones?name=${encodeURIComponent(candidate)}`, {
+					headers: { ...authHeaders, 'Content-Type': 'application/json' }
+				});
+				const data = await response.json();
+
+				if (!data.success) {
+					return { domain, status: 'unchecked' };
+				}
+
+				if (data.result?.length) {
+					const zone = data.result[0];
+					const active = zone.status === 'active' && !zone.paused;
+					return {
+						domain,
+						status: active ? 'active' : 'inactive',
+						zoneStatus: zone.paused ? 'paused' : zone.status
+					};
+				}
+			}
+
+			return { domain, status: 'inactive', zoneStatus: 'not_found' };
+		} catch (_) {
+			return { domain, status: 'unchecked' };
+		}
+	},
 
 	async addDomain(c, params) {
 		const { workerName = 'cloud-mail' } = params;

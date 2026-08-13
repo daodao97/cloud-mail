@@ -140,8 +140,17 @@ const en = {
     multipleEmail: 'Multiple Email Address',
     multipleEmailDesc: 'Enable this feature to allow users to add multiple email',
     currentDomains: 'Supported Domains',
-    currentDomainsDesc: '{count} domains returned by the domainList API',
+    currentDomainsDesc: '{count} domains; status is based on Cloudflare hosting',
     noSupportedDomains: 'No supported domains',
+    addSupportedDomain: 'Add Supported Domain',
+    addDomainSuccess: 'Domain added successfully',
+    invalidDomain: 'Enter a valid domain',
+    domainStatus: {
+      active: 'Active',
+      inactive: 'Abnormal',
+      unchecked: 'Unchecked'
+    },
+    domainStatusDetail: 'Cloudflare status: {status}',
     customization: 'Customization',
     websiteTitle: 'Title',
     loginBoxOpacity: 'Login Box Opacity',

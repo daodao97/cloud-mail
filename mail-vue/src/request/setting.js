@@ -12,6 +12,14 @@ export function domainList() {
     return http.get('/public/domainList', { noMsg: true })
 }
 
+export function domainStatusList() {
+    return http.get('/setting/domainStatus', { noMsg: true })
+}
+
+export function addDomain(params) {
+    return http.post('/public/addDomain', params)
+}
+
 export function websiteConfig() {
     return http.get('/setting/websiteConfig')
 }
