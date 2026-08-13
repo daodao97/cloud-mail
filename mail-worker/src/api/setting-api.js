@@ -19,6 +19,11 @@ app.get('/setting/domainStatus', async (c) => {
 	return c.json(result.ok(domains));
 });
 
+app.delete('/setting/domain', async (c) => {
+	const data = await cloudflareService.deleteDomain(c, c.req.query('domain'));
+	return c.json(result.ok(data));
+});
+
 app.get('/setting/websiteConfig', async (c) => {
 	const setting = await settingService.websiteConfig(c);
 	return c.json(result.ok(setting));

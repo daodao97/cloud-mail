@@ -100,7 +100,18 @@
                     placement="top"
                 >
                   <el-tag :type="domainTagType(item.status)" effect="plain">
-                    {{ item.domain }} · {{ $t(`domainStatus.${item.status}`) }}
+                    <span>{{ item.domain }} · {{ $t(`domainStatus.${item.status}`) }}</span>
+                    <el-button
+                        v-if="item.status === 'inactive'"
+                        class="domain-delete-button"
+                        link
+                        type="danger"
+                        :disabled="!item.removable"
+                        :loading="domainDeleting === item.domain"
+                        @click.stop="confirmDeleteDomain(item)"
+                    >
+                      <Icon icon="material-symbols:delete-outline-rounded" width="15" height="15"/>
+                    </el-button>
                   </el-tag>
                 </el-tooltip>
               </div>
@@ -889,7 +900,7 @@
 
 <script setup>
 import {computed, defineOptions, nextTick, reactive, ref} from "vue";
-import {addDomain, deleteBackground, domainStatusList, setBackground, setBlackList, settingQuery, settingSet} from "@/request/setting.js";
+import {addDomain, deleteBackground, deleteDomain, domainStatusList, setBackground, setBlackList, settingQuery, settingSet} from "@/request/setting.js";
 import {useSettingStore} from "@/store/setting.js";
 import {useUiStore} from "@/store/ui.js";
 import {useUserStore} from "@/store/user.js";
@@ -945,6 +956,7 @@ const domainListLoading = ref(false)
 const domainAddShow = ref(false)
 const domainAddLoading = ref(false)
 const domainInput = ref('')
+const domainDeleting = ref('')
 const minEmailPrefix = ref(0)
 const emailPrefixFilter = ref([])
 const backgroundUrl = ref('')
@@ -1094,10 +1106,33 @@ function domainTagType(status) {
 }
 
 function domainStatusDescription(item) {
+  if (item.status === 'inactive' && !item.removable) {
+    return t('domainConfiguredByEnvironment')
+  }
   if (item.status === 'inactive' && item.zoneStatus) {
     return t('domainStatusDetail', {status: item.zoneStatus})
   }
   return t(`domainStatus.${item.status}`)
+}
+
+function confirmDeleteDomain(item) {
+  if (!item.removable || domainDeleting.value) return
+  ElMessageBox.confirm(t('deleteDomainConfirm', {domain: item.domain}), {
+    confirmButtonText: t('confirm'),
+    cancelButtonText: t('cancel'),
+    type: 'warning'
+  }).then(() => {
+    domainDeleting.value = item.domain
+    return deleteDomain(item.domain).then(async () => {
+      ElMessage.success(t('deleteDomainSuccess'))
+      await loadSupportedDomains()
+      const refreshedDomains = supportedDomainList.value.map(domainItem => `@${domainItem.domain}`)
+      setting.value.domainList = refreshedDomains
+      settingStore.domainList = refreshedDomains
+    }).finally(() => {
+      domainDeleting.value = ''
+    })
+  }).catch(() => {})
 }
 
 function submitDomain() {
@@ -1826,6 +1861,13 @@ function editSetting(settingForm, refreshStatus = true) {
 
 .domain-list-actions {
   display: flex;
+}
+
+.domain-delete-button {
+  margin-left: 4px;
+  padding: 0;
+  height: auto;
+  vertical-align: middle;
 }
 
 .setting-item {

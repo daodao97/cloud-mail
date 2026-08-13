@@ -9,6 +9,8 @@ const cloudflareService = {
 
 	async getDomainStatuses(c) {
 		const domains = await domainUtils.getAllowedDomains(c);
+		const kvDomainsStr = await c.env.kv.get(KvConst.DOMAINS);
+		const kvDomains = new Set((kvDomainsStr ? JSON.parse(kvDomainsStr) : []).map(domain => this.normalizeDomain(domain)));
 		const setting = await settingService.query(c);
 		const cfApiToken = setting.cfApiToken || c.env.cfApiToken;
 		const cfApiKey = setting.cfApiKey || c.env.cfApiKey;
@@ -18,10 +20,35 @@ const cloudflareService = {
 		try {
 			authHeaders = this.getAuthHeaders(cfApiToken, cfApiKey, cfEmail);
 		} catch (_) {
-			return domains.map(domain => ({ domain, status: 'unchecked' }));
+			return domains.map(domain => ({ domain, status: 'unchecked', removable: kvDomains.has(this.normalizeDomain(domain)) }));
 		}
 
-		return Promise.all(domains.map(domain => this.getDomainStatus(authHeaders, domain)));
+		return Promise.all(domains.map(async domain => ({
+			...await this.getDomainStatus(authHeaders, domain),
+			removable: kvDomains.has(this.normalizeDomain(domain))
+		})));
+	},
+
+	async deleteDomain(c, domainValue) {
+		const domain = this.normalizeDomain(domainValue);
+		if (!domain) {
+			throw new BizError('Missing required parameter: domain');
+		}
+
+		const envDomains = (c.env.domain || []).map(item => this.normalizeDomain(item));
+		if (envDomains.includes(domain)) {
+			throw new BizError('This domain is configured by the environment and must be removed from the deployment configuration');
+		}
+
+		const domainsStr = await c.env.kv.get(KvConst.DOMAINS);
+		const domains = domainsStr ? JSON.parse(domainsStr) : [];
+		const nextDomains = domains.filter(item => this.normalizeDomain(item) !== domain);
+		if (nextDomains.length === domains.length) {
+			throw new BizError(`Domain not found: ${domain}`);
+		}
+
+		await c.env.kv.put(KvConst.DOMAINS, JSON.stringify(nextDomains));
+		return { success: true, domain };
 	},
 
 	async getDomainStatus(authHeaders, domain) {

@@ -151,6 +151,9 @@ const zh = {
       unchecked: '未检测'
     },
     domainStatusDetail: 'Cloudflare 状态：{status}',
+    deleteDomainConfirm: '确定删除异常域名 {domain} 吗？',
+    deleteDomainSuccess: '域名删除成功',
+    domainConfiguredByEnvironment: '该域名由环境变量配置，请在部署配置中删除',
     customization: '个性化设置',
     websiteTitle: '网站标题',
     loginBoxOpacity: '登录透明',

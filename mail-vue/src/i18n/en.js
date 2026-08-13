@@ -151,6 +151,9 @@ const en = {
       unchecked: 'Unchecked'
     },
     domainStatusDetail: 'Cloudflare status: {status}',
+    deleteDomainConfirm: 'Delete the abnormal domain {domain}?',
+    deleteDomainSuccess: 'Domain deleted successfully',
+    domainConfiguredByEnvironment: 'This domain is configured by an environment variable; remove it from the deployment configuration',
     customization: 'Customization',
     websiteTitle: 'Title',
     loginBoxOpacity: 'Login Box Opacity',

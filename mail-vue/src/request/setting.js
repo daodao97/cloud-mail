@@ -20,6 +20,10 @@ export function addDomain(params) {
     return http.post('/public/addDomain', params)
 }
 
+export function deleteDomain(domain) {
+    return http.delete('/setting/domain', {params: {domain}})
+}
+
 export function websiteConfig() {
     return http.get('/setting/websiteConfig')
 }
